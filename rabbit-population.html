@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Rabbit Population Simulation & Graphing Tool</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+    :root {
+        box-sizing: border-box;
+        padding-top: env(safe-area-inset-top, 0px);
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+        --bg: #f7fafc; --text: #2d3748; --card: #ffffff; --heading: #1a202c;
+        --border: #e2e8f0; --th-bg: #f7fafc; --th-text: #4a5568;
+        --btn-bg: #edf2f7; --btn-text: #4a5568; --accent: #3182ce;
+        --sim: #38a169; --sim-hover: #2f855a;
+        --input-bg: #ffffff; --input-border: #cbd5e0;
+        --brown: #8B4513; --white-line: #718096; --grid: rgba(0,0,0,0.1);
+        --shadow: rgba(0,0,0,0.05);
+    }
+    html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+    @media (prefers-color-scheme: dark) {
+        :root:not([data-theme="light"]) {
+            color-scheme: dark;
+            --bg: #171923; --text: #e2e8f0; --card: #1f2330; --heading: #f7fafc;
+            --border: #3a4152; --th-bg: #272c3b; --th-text: #cbd5e0;
+            --btn-bg: #2d3345; --btn-text: #cbd5e0; --accent: #4299e1;
+            --sim: #2f855a; --sim-hover: #38a169;
+            --input-bg: #171923; --input-border: #4a5568;
+            --brown: #d9955a; --white-line: #e2e8f0; --grid: rgba(255,255,255,0.12);
+            --shadow: rgba(0,0,0,0.3);
+        }
+    }
+    :root[data-theme="dark"] {
+        color-scheme: dark;
+        --bg: #171923; --text: #e2e8f0; --card: #1f2330; --heading: #f7fafc;
+        --border: #3a4152; --th-bg: #272c3b; --th-text: #cbd5e0;
+        --btn-bg: #2d3345; --btn-text: #cbd5e0; --accent: #4299e1;
+        --sim: #2f855a; --sim-hover: #38a169;
+        --input-bg: #171923; --input-border: #4a5568;
+        --brown: #d9955a; --white-line: #e2e8f0; --grid: rgba(255,255,255,0.12);
+        --shadow: rgba(0,0,0,0.3);
+    }
+    html, body { margin: 0; }
+    body { font-family: system-ui, -apple-system, sans-serif; background-color: var(--bg); color: var(--text); padding: 20px; display: flex; justify-content: center; }
+    .container { background: var(--card); padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px var(--shadow); max-width: 800px; width: 100%; box-sizing: border-box; }
+    h1 { text-align: center; margin-top: 0; color: var(--heading); font-size: 24px; }
+    .selector { display: flex; justify-content: center; gap: 12px; margin-bottom: 25px; flex-wrap: wrap; }
+    button { padding: 12px 20px; font-size: 15px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: all 0.2s; }
+    .btn-scen { background-color: var(--btn-bg); color: var(--btn-text); }
+    .btn-scen.active { background-color: var(--accent); color: #fff; }
+    .btn-sim { background-color: var(--sim); color: #fff; display: block; margin: 20px auto; }
+    .btn-sim:hover { background-color: var(--sim-hover); }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 25px; font-size: 16px; }
+    th, td { border: 1px solid var(--border); padding: 12px; text-align: center; }
+    th { background-color: var(--th-bg); color: var(--th-text); }
+    td.brown { font-weight: bold; color: var(--brown); }
+    td.white { font-weight: bold; color: var(--white-line); }
+    input[type="number"] { width: 70px; padding: 6px; border: 1px solid var(--input-border); background: var(--input-bg); color: var(--text); border-radius: 4px; text-align: center; font-size: 16px; }
+    .chart-wrap { position: relative; height: 380px; width: 100%; }
+</style>
+</head>
+<body>
+<div class="container">
+    <h1>🐇 Rabbit Population Data & Graphing Tool</h1>
+    <div class="selector">
+        <button class="btn-scen active" onclick="setScenario('forest', this)">🌳 Forest Environment</button>
+        <button class="btn-scen" onclick="setScenario('snow', this)">❄️ Snow Environment</button>
+        <button class="btn-scen" onclick="setScenario('disease', this)">🦠 Disease Outbreak</button>
+    </div>
+    <div class="table-wrap">
+    <table>
+        <thead>
+            <tr>
+                <th>Fur Color</th>
+                <th>Initial</th>
+                <th>Post-Event (Survival)</th>
+                <th>Final (Post-Repro)</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="brown">🫘 Brown Fur (Solid Line)</td>
+                <td><input type="number" min="0" id="bi" value="50" oninput="sync()"></td>
+                <td><input type="number" min="0" id="be" value="45" oninput="sync()"></td>
+                <td><input type="number" min="0" id="br" value="90" oninput="sync()"></td>
+            </tr>
+            <tr>
+                <td class="white">❄️ White Fur (Dashed Line)</td>
+                <td><input type="number" min="0" id="wi" value="50" oninput="sync()"></td>
+                <td><input type="number" min="0" id="we" value="15" oninput="sync()"></td>
+                <td><input type="number" min="0" id="wr" value="30" oninput="sync()"></td>
+            </tr>
+        </tbody>
+    </table>
+    </div>
+    <button class="btn-sim" onclick="sim()">🎲 Simulate Scenario Data</button>
+    <div class="chart-wrap"><canvas id="c"></canvas></div>
+</div>
+<script>
+    let ch, sc = 'forest';
+    const presets = {
+        forest: [50, 45, 90, 50, 15, 30],
+        snow: [50, 12, 24, 50, 48, 96],
+        disease: [60, 15, 30, 60, 55, 110]
+    };
+    const ids = ['bi','be','br','wi','we','wr'];
+    const val = id => Math.max(0, Number(document.getElementById(id).value) || 0);
+
+    function setScenario(s, btn) {
+        sc = s;
+        document.querySelectorAll('.btn-scen').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const p = presets[s];
+        ids.forEach((id, i) => document.getElementById(id).value = p[i]);
+        sync();
+    }
+    function sim() {
+        const p = presets[sc], v = () => Math.floor(Math.random() * 11) - 5;
+        document.getElementById('bi').value = Math.max(10, p[0] + v());
+        document.getElementById('be').value = Math.max(5, p[1] + v());
+        document.getElementById('br').value = Math.max(10, p[2] + v()*2);
+        document.getElementById('wi').value = Math.max(10, p[3] + v());
+        document.getElementById('we').value = Math.max(5, p[4] + v());
+        document.getElementById('wr').value = Math.max(10, p[5] + v()*2);
+        sync();
+    }
+    function sync() {
+        ch.data.datasets[0].data = [val('bi'), val('be'), val('br')];
+        ch.data.datasets[1].data = [val('wi'), val('we'), val('wr')];
+        ch.update();
+    }
+    function css(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+    function applyTheme() {
+        const text = css('--text'), grid = css('--grid');
+        ch.options.scales.x.ticks = { color: text };
+        ch.options.scales.y.ticks = { color: text };
+        ch.options.scales.x.grid = { color: grid };
+        ch.options.scales.y.grid = { color: grid };
+        ch.options.scales.x.title.color = text;
+        ch.options.scales.y.title.color = text;
+        ch.options.plugins.legend.labels.color = text;
+        ch.data.datasets[0].borderColor = ch.data.datasets[0].backgroundColor = css('--brown');
+        ch.data.datasets[1].borderColor = ch.data.datasets[1].backgroundColor = css('--white-line');
+        ch.update();
+    }
+
+    ch = new Chart(document.getElementById('c').getContext('2d'), {
+        type: 'line',
+        data: {
+            labels: ['Initial Population', 'Post-Event', 'Post-Reproduction'],
+            datasets: [
+                { label: 'Brown Fur (Solid)', data: [50, 45, 90], borderColor: '#8B4513', backgroundColor: '#8B4513', borderWidth: 3, tension: 0.1 },
+                { label: 'White Fur (Dashed)', data: [50, 15, 30], borderColor: '#718096', backgroundColor: '#718096', borderWidth: 3, borderDash: [6, 6], tension: 0.1 }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { labels: {} } },
+            scales: {
+                y: { beginAtZero: true, title: { display: true, text: 'Rabbit Population Size' } },
+                x: { title: { display: true, text: 'Timeline Stages' } }
+            }
+        }
+    });
+    applyTheme();
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
+</script>
+</body>
+</html>
